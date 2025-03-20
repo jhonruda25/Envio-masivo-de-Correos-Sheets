@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+      :root {
+        --primary-color: #1a73e8;
+        --secondary-color: #f1f3f4;
+        --border-color: #dadce0;
+      }
+
+      .full-width {
+        width: 100%;
+      }
+      
+      body {
+        font-family: 'Roboto', Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: #f8f9fa;
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+
+      .step-container {
+        position: relative;
+        min-height: 400px; /* Altura mínima para evitar colapsos */
+      }
+
+      .step {
+        display: none; /* Ocultar todos los pasos por defecto */
+        width: 100%;
+        padding: 0 15px;
+        box-sizing: border-box;
+      }
+
+      .step.active {
+        display: block; /* Mostrar solo el paso activo */
+      }
+
+      .condition-row button {
+        background: #dc3545; /* Color distintivo para eliminar */
+      }
+
+      .navigation-buttons {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 20px;
+        gap: 10px;
+      }
+
+      .step-indicator {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-bottom: 30px;
+      }
+
+      .step-dot {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #ddd;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+      }
+
+      .step-dot.active {
+        background: var(--primary-color);
+        transform: scale(1.2);
+      }
+
+      .section-card {
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 25px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+      }
+
+      .section-title {
+        font-size: 20px;
+        color: var(--primary-color);
+        margin-bottom: 25px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .input-group {
+        margin: 18px 0;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: #5f6368;
+      }
+
+      input, select, textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        font-size: 15px;
+        transition: border-color 0.3s ease;
+      }
+
+      input:focus, select:focus, textarea:focus {
+        border-color: var(--primary-color);
+        outline: none;
+      }
+
+      button {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 15px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      button:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+      }
+
+      .condition-row {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin: 15px 0;
+      }
+
+      #previewModal {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        width: 90%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        z-index: 1000;
+        width: 700px;
+        max-height: 90vh;
+        overflow: auto;
+        max-width: 700px;
+      }
+
+      .counter-badge {
+        background: var(--secondary-color);
+        padding: 8px 16px;
+        border-radius: 24px;
+        font-size: 15px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .template-section {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-top: 20px;
+      }
+
+      .modal-close {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        cursor: pointer;
+        color: #666;
+      }
+
+      #conditionsContainer {
+        margin-top: 15px;
+        border-top: 1px solid #eee;
+        padding-top: 15px;
+      }
+
+      .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 15px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="step-indicator">
+        <div class="step-dot active" data-step="1"></div>
+        <div class="step-dot" data-step="2"></div>
+        <div class="step-dot" data-step="3"></div>
+        <div class="step-dot" data-step="4"></div>
+      </div>
+      
+      <div class="step-container">
+        <!-- Paso 1: Selección de hoja -->
+        <div class="step active" data-step="1">
+          <div class="section-card">
+            <div class="section-title">
+              <span class="material-icons">storage</span>
+              <h3>1. Seleccionar hoja de datos</h3>
+            </div>
+            <div class="input-group">
+              <label>Seleccione la hoja que contiene los datos:</label>
+              <select id="sheetSelect" onchange="loadColumns()"></select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Paso 2: Condiciones -->
+        <div class="step" data-step="2">
+          <div class="section-card">
+            <div class="section-title">
+              <span class="material-icons">filter_list</span>
+              <h3>2. Condiciones de envío (Opcional)</h3>
+            </div>
+            <div class="checkbox-group">
+              <input type="checkbox" id="enableConditions" onchange="toggleConditions()">
+              <label for="enableConditions">Habilitar condiciones de filtrado</label>
+            </div>
+            <div id="conditionsContainer" style="display:none">
+              <div class="condition-row">
+                <select class="columnSelect"></select>
+                <input type="text" class="conditionInput" placeholder="Ej: == 'Activo'">
+                <button onclick="addCondition()">+ Añadir</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Paso 3: Composición -->
+        <div class="step" data-step="3">
+          <div class="section-card">
+            <div class="section-title">
+              <span class="material-icons">drafts</span>
+              <h3>3. Componer correo electrónico</h3>
+            </div>
+            <div class="input-group">
+              <label>Columna con direcciones de correo:</label>
+              <select id="emailColumnSelect"></select>
+            </div>
+            <div class="input-group">
+              <label>CC:</label>
+              <input type="text" id="ccInput" placeholder="Separar con comas">
+            </div>
+            <div class="input-group">
+              <label>CCO:</label>
+              <input type="text" id="bccInput" placeholder="Separar con comas">
+            </div>
+            <div class="input-group">
+              <label>Asunto del correo:</label>
+              <input type="text" id="subjectInput">
+            </div>
+            <div class="input-group">
+              <label>Cuerpo del mensaje:</label>
+              <textarea id="bodyInput" rows="8"></textarea>
+            </div>
+            <!-- Modificar el contenedor de plantillas para mejor usabilidad -->
+            <div class="template-section">
+              <div style="flex: 1">
+                <select id="templateSelect" onchange="loadTemplate()" class="full-width">
+                  <option value="">Cargar plantilla existente...</option>
+                </select>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center">
+                <input type="text" id="templateName" placeholder="Nombre plantilla" style="width: 150px">
+                <button onclick="saveTemplate()" style="background: #689f38">
+                  <span class="material-icons">save</span> Guardar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Paso 4: Confirmación -->
+        <div class="step" data-step="4">
+          <div class="section-card">
+            <div class="section-title">
+              <span class="material-icons">task_alt</span>
+              <h3>4. Confirmar y enviar</h3>
+            </div>
+            <div class="input-group">
+              <div class="counter-badge">
+                <span class="material-icons">mail</span>
+                <span id="emailCount">0</span> correos listos para enviar
+              </div>
+            </div>
+            <div style="display: flex; gap: 15px; margin-top: 25px;">
+              <button onclick="showPreview()" style="background: #673ab7">
+                <span class="material-icons">visibility</span> Vista previa
+              </button>
+              <button onclick="sendEmails()" style="background: #4caf50">
+                <span class="material-icons">send</span> Enviar ahora
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="navigation-buttons">
+        <button id="prevBtn" onclick="previousStep()" style="display:none">
+          <span class="material-icons">arrow_back</span> Anterior
+        </button>
+        <button id="nextBtn" onclick="nextStep()">Siguiente <span class="material-icons">arrow_forward</span></button>
+      </div>
+    </div>
+
+    <!-- Modal de vista previa -->
+    <div id="previewModal">
+      <span class="material-icons modal-close" onclick="closePreview()">close</span>
+      <h2>📧 Vista previa del correo</h2>
+      <div class="preview-section">
+        <label>Para:</label>
+        <div id="previewTo" class="preview-content"></div>
+      </div>
+      <div class="preview-section">
+        <label>CC:</label>
+        <div id="previewCc" class="preview-content"></div>
+      </div>
+      <div class="preview-section">
+        <label>CCO:</label>
+        <div id="previewBcc" class="preview-content"></div>
+      </div>
+      <div class="preview-section">
+        <label>Asunto:</label>
+        <div id="previewSubject" class="preview-content"></div>
+      </div>
+      <div class="preview-section">
+        <label>Contenido:</label>
+        <div id="previewBody" class="preview-content" style="white-space: pre-wrap;"></div>
+      </div>
+      <button onclick="closePreview()" style="margin-top: 20px;">Cerrar vista previa</button>
+    </div>
+
+    <script>
+      let currentStep = 1;
+      const totalSteps = 4;
+      let columns = [];
+      
+      function initialize() {
+        loadSheets();
+        loadTemplates();
+        updateNavigation();
+      }
+
+      function loadSheets() {
+        google.script.run.withSuccessHandler(populateSheets).getSheets();
+      }
+
+      function populateSheets(sheets) {
+        const select = document.getElementById('sheetSelect');
+        select.innerHTML = sheets.map(sheet => 
+          `<option value="${sheet.name}">${sheet.name}</option>`
+        ).join('');
+        loadColumns();
+      }
+
+      function loadColumns() {
+        const sheetName = document.getElementById('sheetSelect').value;
+        google.script.run.withSuccessHandler(handleColumns).getColumns(sheetName);
+      }
+      
+      function handleColumns(cols) {
+        columns = cols;
+        refreshColumnSelectors();
+        updateEmailColumnSelect();
+      }
+
+      function toggleConditions() {
+        const enable = document.getElementById('enableConditions').checked;
+        document.getElementById('conditionsContainer').style.display = enable ? 'block' : 'none';
+        if (enable && document.querySelectorAll('.condition-row').length === 0) {
+          addCondition();
+        }
+      }
+
+      function addCondition() {
+        const container = document.getElementById('conditionsContainer');
+        const newRow = document.createElement('div');
+        newRow.className = 'condition-row';
+        newRow.innerHTML = `
+          <select class="columnSelect"></select>
+          <input type="text" class="conditionInput" placeholder="Ej: == 'Activo'" oninput="updateCount()">
+          <button onclick="this.parentElement.remove(); updateCount()">× Eliminar</button>
+        `;
+        container.appendChild(newRow);
+        refreshColumnSelectors();
+        updateCount();
+      }
+
+      function refreshColumnSelectors() {
+        document.querySelectorAll('.columnSelect').forEach(select => {
+          select.innerHTML = columns.map(col => 
+            `<option value="${col}">${col}</option>`
+          ).join('');
+        });
+      }
+
+      function updateEmailColumnSelect() {
+        const select = document.getElementById('emailColumnSelect');
+        select.innerHTML = columns.map(col => 
+          `<option value="${col}">${col}</option>`
+        ).join('');
+      }
+
+      function nextStep() {
+        if (!validateStep(currentStep)) return;
+        
+        // Ocultar paso actual
+        document.querySelector(`.step[data-step="${currentStep}"]`).classList.remove('active');
+        
+        // Avanzar al siguiente paso
+        currentStep++;
+        
+        // Mostrar el nuevo paso
+        document.querySelector(`.step[data-step="${currentStep}"]`).classList.add('active');
+        
+        // Actualizar navegación y contadores
+        updateNavigation();
+        updateStepIndicator();
+        
+        if (currentStep === 4) updateCount();
+        handleStepChange();
+      }
+
+      function previousStep() {
+        // Ocultar paso actual
+        document.querySelector(`.step[data-step="${currentStep}"]`).classList.remove('active');
+        
+        // Retroceder al paso anterior
+        currentStep--;
+        
+        // Mostrar el paso anterior
+        document.querySelector(`.step[data-step="${currentStep}"]`).classList.add('active');
+        
+        // Actualizar navegación
+        updateNavigation();
+        updateStepIndicator();
+        handleStepChange();
+      }
+
+      function updateNavigation() {
+        document.getElementById('prevBtn').style.display = currentStep > 1 ? 'flex' : 'none';
+        const nextBtn = document.getElementById('nextBtn');
+        if (currentStep === totalSteps) {
+          nextBtn.style.display = 'none';
+        } else {
+          nextBtn.style.display = 'flex';
+          nextBtn.innerHTML = currentStep === totalSteps - 1 ? 'Finalizar <span class="material-icons">arrow_forward</span>' : 'Siguiente <span class="material-icons">arrow_forward</span>';
+        }
+      }
+
+      function updateStepIndicator() {
+        document.querySelectorAll('.step-dot').forEach((dot, index) => {
+          dot.classList.toggle('active', index + 1 === currentStep);
+        });
+      }
+
+      function validateStep(step) {
+        switch(step) {
+          case 1:
+            if (!document.getElementById('sheetSelect').value) {
+              alert('Por favor seleccione una hoja de cálculo');
+              return false;
+            }
+            return true;
+          case 2:
+            if (document.getElementById('enableConditions').checked) {
+              const conditions = document.querySelectorAll('.condition-row');
+              if (conditions.length === 0) {
+                alert('Debe agregar al menos una condición');
+                return false;
+              }
+              
+              // Verificar que las condiciones tengan un formato válido
+              for(let i = 0; i < conditions.length; i++) {
+                const conditionText = conditions[i].querySelector('.conditionInput').value;
+                if(!conditionText || !conditionText.match(/(==|!=|>|<|>=|<=|contains|startsWith|endsWith)\s*.*/)) {
+                  alert('Formato de condición inválido en la condición #' + (i+1));
+                  return false;
+                }
+              }
+            }
+            return true;
+            
+          case 3:
+            if (!document.getElementById('emailColumnSelect').value) {
+              alert('Seleccione la columna que contiene los emails');
+              return false;
+            }
+            if (!document.getElementById('subjectInput').value) {
+              alert('El asunto del correo es obligatorio');
+              return false;
+            }
+            if (!document.getElementById('bodyInput').value) {
+              alert('El cuerpo del mensaje es obligatorio');
+              return false;
+            }
+            return true;
+            
+          default:
+            return true;
+        }
+      }
+
+      function loadTemplates() {
+        google.script.run.withSuccessHandler(templates => {
+          const select = document.getElementById('templateSelect');
+          select.innerHTML = '<option value="">Cargar plantilla...</option>' + 
+            templates.map(t => 
+              `<option value="${t.name}">${t.name} (${t.author})</option>`
+            ).join('');
+        }).getTemplates();
+      }
+
+      function loadTemplate() {
+        const templateName = document.getElementById('templateSelect').value;
+        if (!templateName) return;
+
+        google.script.run.withSuccessHandler(template => {
+          if (template) {
+            document.getElementById('subjectInput').value = template.subject;
+            document.getElementById('bodyInput').value = template.body;
+          }
+        }).getTemplate(templateName);
+      }
+
+      function saveTemplate() {
+        const templateName = document.getElementById('templateName').value;
+        if (!templateName) {
+          alert('Por favor ingrese un nombre para la plantilla');
+          return;
+        }
+        
+        const template = {
+          name: templateName,
+          subject: document.getElementById('subjectInput').value,
+          body: document.getElementById('bodyInput').value
+        };
+        
+        google.script.run.withSuccessHandler(() => {
+          loadTemplates();
+          document.getElementById('templateName').value = '';
+          alert('Plantilla guardada correctamente');
+        }).saveTemplate(template);
+      }
+
+      function updateCount() {
+        const config = getCurrentConfig();
+        google.script.run.withSuccessHandler(count => {
+          document.getElementById('emailCount').textContent = count;
+          if (count === 0 && currentStep === 4) {
+            alert('⚠️ No se encontraron destinatarios. Verifique: \n1. Las condiciones aplicadas\n2. La columna de email seleccionada\n3. Los datos en la hoja');
+          }
+        }).getEmailCount(config);
+      }
+
+      function showPreview() {
+        const config = getCurrentConfig();
+        google.script.run.withSuccessHandler(preview => {
+          if (preview.error) {
+            alert(preview.error);
+            return;
+          }
+          
+          document.getElementById('previewTo').textContent = preview.to;
+          document.getElementById('previewCc').textContent = preview.cc || '-';
+          document.getElementById('previewBcc').textContent = preview.bcc || '-';
+          document.getElementById('previewSubject').textContent = preview.subject;
+          document.getElementById('previewBody').textContent = preview.body;
+          document.getElementById('previewModal').style.display = 'block';
+        }).getEmailPreview(config);
+      }
+
+      function closePreview() {
+        document.getElementById('previewModal').style.display = 'none';
+      }
+
+      function getCurrentConfig() {
+        return {
+          sheetName: document.getElementById('sheetSelect').value,
+          emailColumn: document.getElementById('emailColumnSelect').value,
+          conditions: document.getElementById('enableConditions').checked ? 
+            Array.from(document.querySelectorAll('.condition-row')).map(row => ({
+              column: row.querySelector('.columnSelect').value,
+              condition: row.querySelector('.conditionInput').value
+            })) : [],
+          cc: document.getElementById('ccInput').value,
+          bcc: document.getElementById('bccInput').value,
+          subject: document.getElementById('subjectInput').value,
+          body: document.getElementById('bodyInput').value
+        };
+      }
+
+      function handleStepChange() {
+        if (currentStep === 3) {
+          loadTemplates(); // Actualizar plantillas al llegar a composición
+        }
+      }
+
+      function sendEmails() {
+        const emailCount = parseInt(document.getElementById('emailCount').textContent);
+        if (emailCount === 0) {
+          alert('No hay correos para enviar según los criterios actuales');
+          return;
+        }
+        
+        const confirmation = confirm(`¿Estás seguro de enviar ${emailCount} correos?`);
+        if (!confirmation) return;
+
+        const config = getCurrentConfig();
+        google.script.run.withSuccessHandler(result => {
+          if (result.error) {
+            alert(`Error: ${result.error}`);
+          } else {
+            alert(`${result.count} correos enviados exitosamente!`);
+            document.getElementById('emailCount').textContent = '0';
+          }
+        }).sendEmails(config);
+      }
+
+      // Manejar clics en los indicadores de paso
+      document.querySelectorAll('.step-dot').forEach(dot => {
+        dot.addEventListener('click', function() {
+          const targetStep = parseInt(this.getAttribute('data-step'));
+          // Solo permitir avanzar si todos los pasos anteriores están validados
+          for(let i = 1; i < targetStep; i++) {
+            if(!validateStep(i)) return;
+          }
+          
+          // Ocultar paso actual
+          document.querySelector(`.step[data-step="${currentStep}"]`).classList.remove('active');
+          
+          // Activar nuevo paso
+          currentStep = targetStep;
+          document.querySelector(`.step[data-step="${currentStep}"]`).classList.add('active');
+          
+          // Actualizar navegación
+          updateNavigation();
+          updateStepIndicator();
+          
+          if (currentStep === 4) updateCount();
+          handleStepChange();
+        });
+      });
+
+      window.onload = initialize;
+    </script>
+  </body>
+</html>
